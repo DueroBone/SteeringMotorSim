@@ -10,17 +10,19 @@ import pandas as pd
 # USER INPUTS
 # ============================================================
 
-TORQUE_CONSTANT_MNM_PER_A = 93.808  # motor torque constant [mN*m / A]
-KV_RPM_PER_V = 102.0  # motor speed constant [RPM / V]
-RESISTANCE_OHM = 0.05  # motor winding resistance [ohm]
+TORQUE_CONSTANT_MNM_PER_A = 0.23 * 1000  # motor torque constant [mN*m / A]
+KV_RPM_PER_V = 41.0  # motor speed constant [RPM / V]
+RESISTANCE_OHM = 0.056  # motor winding resistance [ohm]
 
-MOTOR_INERTIA_KGM2 = 0.001  # motor rotor inertia [kg*m^2]
+MOTOR_INERTIA_KGM2 = 0.00117  # motor rotor inertia [kg*m^2]
 ANGLE_DEG = 140.0  # output angle to travel [degrees]
 
-MAX_VOLTAGES = [24.0, 40.0, 60.0, 80.0, 95.0]
-MAX_AMPS = [30.0, 40.0, 50.0, 60.0, 70.0]
-GEAR_RATIOS = [2.0, 2.5, 3.0, 5.0, 7.5, 10.0, 15.0]
-RESISTANCE_TORQUES_NM = [10.0, 20.0, 30.0]  # opposing torques to check [N*m]5
+MAX_VOLTAGES = [24.0, 48]
+MAX_AMPS = [3.0, 6.0]
+GEAR_RATIOS = [48]
+RESISTANCE_TORQUES_NM = [0.0, 15.0, 30.0]  # opposing torques to check [N*m]5
+
+IsTorqueConstantAfterGears = True
 
 # Integration timestep.
 # Reduce this for higher accuracy.
@@ -47,7 +49,7 @@ def simulate_move(
     max_current,
     gear_ratio,
     dt=0.0001,
-    max_sim_time=2.0,
+    max_sim_time=3.0,
 ):
     """
     Simulate a servo moving through angle_deg using maximum acceleration
@@ -69,7 +71,7 @@ def simulate_move(
 
     # Convert motor torque constant:
     # mN*m/A -> N*m/A
-    kt = torque_constant_mNm_A / 1000.0
+    kt = torque_constant_mNm_A / 1000.0 * ( gear_ratio if IsTorqueConstantAfterGears else 1.0)
 
     # Convert Kv RPM/V to motor back-EMF constant.
     #
@@ -263,12 +265,12 @@ def simulate_move(
 DERIVATIVE_PARAMETERS = [
     ("max_voltage", "dTime/dVoltage (s/V)"),
     ("max_current", "dTime/dCurrent Limit (s/A)"),
-    ("gear_ratio", "dTime/dGear Ratio (s/ratio)"),
+    # ("gear_ratio", "dTime/dGear Ratio (s/ratio)"),
     ("resistance_torque_Nm", "dTime/dResistance Torque (s/(N*m))"),
     # ("torque_constant_mNm_A", "dTime/dKt (s/(mN*m/A))"),
     # ("kv_rpm_V", "dTime/dKv (s/(RPM/V))"),
     # ("resistance_ohm", "dTime/dWinding Resistance (s/ohm)"),
-    ("motor_inertia_kgm2", "dTime/dMotor Inertia (s/(kg*m^2))"),
+    # ("motor_inertia_kgm2", "dTime/dMotor Inertia (s/(kg*m^2))"),
     ("angle_deg", "dTime/dAngle (s/deg)"),
 ]
 
@@ -285,7 +287,10 @@ def move_time_derivatives(parameters, relative_step=0.01):
 
     for parameter_name, output_label in DERIVATIVE_PARAMETERS:
         value = parameters[parameter_name]
-        step = max(abs(value) * relative_step, 1e-6)
+        if parameter_name == "motor_inertia_kgm2":
+            step = max(abs(value) * relative_step, 1e-8)
+        else:
+            step = max(abs(value) * relative_step, 1e-6)
 
         upper_parameters = parameters.copy()
         upper_parameters[parameter_name] = value + step
@@ -360,7 +365,7 @@ with ProcessPoolExecutor() as executor:
     results = list(executor.map(run_combination, combinations))
 
 # results = [r for r in results if math.isfinite(r["Move Time (s)"])]
-results = [r for r in results if (r["dTime/dVoltage (s/V)"] != 0.0 or r["Voltage (V)"] == max(MAX_VOLTAGES))]
+# results = [r for r in results if (r["dTime/dVoltage (s/V)"] != 0.0 or r["Voltage (V)"] == max(MAX_VOLTAGES))]
 results = [r for r in results if not math.isnan(r["Move Time (s)"])]
 
 # ============================================================
@@ -386,10 +391,10 @@ print(
         {
             "Move Time (s)": 4,
             **{output_label: 6 for _, output_label in DERIVATIVE_PARAMETERS},
-            "Peak Output Speed (deg/s)": 1,
-            "Peak Motor Speed (RPM)": 0,
-            "Peak Current (A)": 2,
-            "Accel→Brake Time (s)": 4,
+            # "Peak Output Speed (deg/s)": 1,
+            # "Peak Motor Speed (RPM)": 0,
+            # "Peak Current (A)": 2,
+            # "Accel→Brake Time (s)": 4,
         }
     )
 )
