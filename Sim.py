@@ -18,7 +18,7 @@ MOTOR_INERTIA_KGM2 = 0.001  # motor rotor inertia [kg*m^2]
 ANGLE_DEG = 140.0  # output angle to travel [degrees]
 
 MAX_VOLTAGES = [24.0, 40.0, 60.0, 80.0, 95.0]
-MAX_AMPS = [40.0, 50.0, 60.0, 70.0]
+MAX_AMPS = [30.0, 40.0, 50.0, 60.0, 70.0]
 GEAR_RATIOS = [2.0, 2.5, 3.0, 5.0, 7.5, 10.0, 15.0]
 RESISTANCE_TORQUES_NM = [10.0, 20.0, 30.0]  # opposing torques to check [N*m]5
 
