@@ -10,19 +10,19 @@ import pandas as pd
 # USER INPUTS
 # ============================================================
 
-TORQUE_CONSTANT_MNM_PER_A = 0.23 * 1000  # motor torque constant [mN*m / A]
-KV_RPM_PER_V = 41.0  # motor speed constant [RPM / V]
-RESISTANCE_OHM = 0.056  # motor winding resistance [ohm]
+TORQUE_CONSTANT_MNM_PER_A = 1 / 47 * 1000  # motor torque constant [mN*m / A]
+KV_RPM_PER_V = 473.0  # motor speed constant [RPM / V]
+RESISTANCE_OHM = 0.00356  # motor winding resistance [ohm]
 
-MOTOR_INERTIA_KGM2 = 0.00117  # motor rotor inertia [kg*m^2]
-ANGLE_DEG = 140.0  # output angle to travel [degrees]
+MOTOR_INERTIA_KGM2 = 0.00005  # motor rotor inertia [kg*m^2]
+ANGLE_DEG = math.pi  # output angle to travel [degrees]
 
-MAX_VOLTAGES = [24.0, 48]
-MAX_AMPS = [3.0, 6.0]
-GEAR_RATIOS = [48]
-RESISTANCE_TORQUES_NM = [0.0, 15.0, 30.0]  # opposing torques to check [N*m]5
+MAX_VOLTAGES = [12.0]
+MAX_AMPS = [60.0]
+GEAR_RATIOS = [50.0]
+RESISTANCE_TORQUES_NM = [10.0]  # opposing torques to check [N*m]5
 
-IsTorqueConstantAfterGears = True
+IsTorqueConstantAfterGears = False
 
 # Integration timestep.
 # Reduce this for higher accuracy.
@@ -71,7 +71,11 @@ def simulate_move(
 
     # Convert motor torque constant:
     # mN*m/A -> N*m/A
-    kt = torque_constant_mNm_A / 1000.0 * ( gear_ratio if IsTorqueConstantAfterGears else 1.0)
+    kt = (
+        torque_constant_mNm_A
+        / 1000.0
+        * (gear_ratio if IsTorqueConstantAfterGears else 1.0)
+    )
 
     # Convert Kv RPM/V to motor back-EMF constant.
     #
@@ -82,7 +86,7 @@ def simulate_move(
     # Ke in V / (rad/s)
     ke = 1.0 / kv_rad_s_V
 
-    target = math.radians(angle_deg)
+    target = angle_deg
 
     # Current state
     theta = 0.0  # output angle [rad]
@@ -347,7 +351,7 @@ def run_combination(combination):
         "Resistance Torque (N*m)": resistance_torque,
         "Move Time (s)": result["time_s"],
         **derivatives,
-        # "Peak Output Speed (deg/s)": result["max_output_speed_deg_s"],
+        "Peak Output Speed (deg/s)": result["max_output_speed_deg_s"],
         # "Peak Motor Speed (RPM)": result["max_motor_rpm"],
         # "Peak Current (A)": result["peak_current_A"],
         # "Accel→Brake Time (s)": result["switch_time_s"],
